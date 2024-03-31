@@ -1,5 +1,5 @@
 # NECS
-![necs banner](necs banner.png)
+![necs banner](./necsbanner.png)
 > A golang library for multiplayer games that use the Donburi ECS.
 Networked Entity Component System; a networking layer for [donburi](https://github.com/yohamta/donburi).
 The goal with this project is to simplify the development of multiplayer games and experiences in Go.
