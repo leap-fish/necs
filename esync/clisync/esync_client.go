@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/leap-fish/necs/esync"
 	"github.com/leap-fish/necs/router"
-	log "github.com/sirupsen/logrus"
 	"github.com/yohamta/donburi"
 	"reflect"
 )
@@ -33,8 +32,8 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 		componentType := reflect.TypeOf(componentData)
 		ctype, ok := esync.Registered(componentType)
 		if !ok {
-			log.Error("Missing esync registration for component: ", componentType)
-			return
+			// TODO: Add back erroring here
+			continue
 		}
 		ctypes = append(ctypes, ctype)
 	}
@@ -62,9 +61,7 @@ func RegisterClient(world donburi.World) {
 	router.On[esync.WorldSnapshot](func(sender *router.NetworkClient, message esync.WorldSnapshot) {
 		err := clientUpdateWorldState(world, message)
 		if err != nil {
-			log.
-				WithError(err).
-				Error("Could not deserialize component in world state")
+			// TODO: Add back error handling here
 		}
 
 		// Removal of old entities
