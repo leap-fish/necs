@@ -18,7 +18,8 @@ Documentation is still a work in progress.
 ### Basic server and client
 To setup a very simple server and client, refer to the [examples](/examples)
 ### Full scale project
-!WIP
+There is a [full scale project](https://github.com/leap-fish/necs-example) which shows how to setup a server, client and network entities between them.
+![preview](https://github.com/leap-fish/necs-example/raw/main/preview.png)
 
 
 ## ❓ Support and help
