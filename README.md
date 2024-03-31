@@ -11,6 +11,7 @@ The goal with this project is to simplify the development of multiplayer games a
 * Type safe network event handling.
 * Works in WASM!
 
+> See a live demo @ [example.leap.fish/](https://example.leap.fish/)
 
 ## 📝 Documentation
 Documentation is still a work in progress.
