@@ -1,7 +1,6 @@
 package esync
 
 import (
-	"github.com/leap-fish/necs/typeid"
 	"github.com/leap-fish/necs/typemapper"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/filter"
@@ -37,20 +36,6 @@ func Registered(componentType reflect.Type) (donburi.IComponentType, bool) {
 // Note that ID 1 is reserved for the NetworkId component used by esync.
 func RegisterComponent(id uint, component any, ctype donburi.IComponentType) error {
 	typ := reflect.TypeOf(component)
-	err := Mapper.RegisterType(id, typ)
-	if err != nil {
-		return err
-	}
-	registered[typ] = ctype
-
-	return nil
-}
-
-// AutoRegister registers a component by using typeID instead of manually defined IDs.
-// This is experimental, and can produce duplicates for some types.
-func AutoRegister(component any, ctype donburi.IComponentType) error {
-	typ := reflect.TypeOf(component)
-	id := typeid.GetTypeId(typ)
 	err := Mapper.RegisterType(id, typ)
 	if err != nil {
 		return err
