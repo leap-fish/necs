@@ -9,6 +9,7 @@ import (
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/component"
 	"golang.org/x/sync/errgroup"
+	"nhooyr.io/websocket"
 	"reflect"
 	"slices"
 	"sync"
@@ -74,15 +75,17 @@ func NetworkSync(world donburi.World, entity *donburi.Entity, components ...donb
 // This is done by serializing all the components of the entity, and preparing a network bundle for the clients.
 func DoSync() error {
 	errs, _ := errgroup.WithContext(context.Background())
-	for _, client := range router.Peers() {
-		snapshot := buildSnapshot(client, world)
 
-		client := client
+	router.PeerMap().Range(func(key *websocket.Conn, client *router.NetworkClient) bool {
+		snapshot := buildSnapshot(client, world)
 		errs.Go(func() error {
 			err := client.SendMessage(snapshot)
 			return err
 		})
-	}
+		
+		return true
+	})
+
 	return errs.Wait()
 }
 

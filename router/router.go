@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/leap-fish/necs/internal/syncx"
 	"github.com/leap-fish/necs/typeid"
 	"github.com/leap-fish/necs/typemapper"
 	"nhooyr.io/websocket"
@@ -25,8 +26,8 @@ var (
 
 	callbacks = make(map[reflect.Type][]any)
 
-	connMap   = map[*websocket.Conn]string{}
-	clientMap = map[*websocket.Conn]*NetworkClient{}
+	idMap     = syncx.Map[*websocket.Conn, string]{}
+	clientMap = syncx.Map[*websocket.Conn, *NetworkClient]{}
 )
 
 // On adds a callback to be called whenever the specified message type T is received.
@@ -92,35 +93,47 @@ func ProcessMessage(sender *NetworkClient, msg []byte) error {
 }
 
 func Client(conn *websocket.Conn) *NetworkClient {
-	if _, ok := clientMap[conn]; ok {
-		return clientMap[conn]
+	client, ok := clientMap.Load(conn)
+	if ok {
+		return client
 	}
 
-	clientMap[conn] = NewNetworkClient(context.Background(), conn)
-	return clientMap[conn]
+	clientMap.Store(conn, NewNetworkClient(context.Background(), conn))
+	// Ignore because we know it's set
+	r, _ := clientMap.Load(conn)
+	return r
 }
 
 func Id(client *NetworkClient) string {
 
-	if _, ok := connMap[client.Conn]; ok {
-		return connMap[client.Conn]
+	id, ok := idMap.Load(client.Conn)
+	if ok {
+		return id
 	}
 
 	bytes := make([]byte, 16)
 	_, _ = rand.Read(bytes)
-	id := fmt.Sprintf("%d:%x", len(connMap), bytes[:10])
+	id = fmt.Sprintf("%x", bytes[:10])
 
-	connMap[client.Conn] = id
+	idMap.Store(client.Conn, id)
 	return id
 }
 
+// Peers returns a new slice of NetworkClient pointers from the underlying map.
+// Use PeerMap if you are able to as this avoids this kind of duplication.
 func Peers() []*NetworkClient {
-	peers := make([]*NetworkClient, 0, len(clientMap))
-	for _, client := range clientMap {
-		peers = append(peers, client)
-	}
+	var peers []*NetworkClient
 
+	clientMap.Range(func(key *websocket.Conn, value *NetworkClient) bool {
+		peers = append(peers, value)
+		return true
+	})
 	return peers
+}
+
+// PeerMap returns a pointer to the underlying peer map.
+func PeerMap() *syncx.Map[*websocket.Conn, *NetworkClient] {
+	return &clientMap
 }
 
 func Broadcast(msg any) error {
@@ -164,8 +177,8 @@ func CallDisconnect(sender *websocket.Conn, err error) {
 		go callback(client, err)
 	}
 
-	delete(connMap, sender)
-	delete(clientMap, sender)
+	idMap.Delete(sender)
+	clientMap.Delete(sender)
 }
 
 func CallError(sender *websocket.Conn, err error) {
@@ -181,4 +194,7 @@ func ResetRouter() {
 	disconnectCallbacks = []func(sender *NetworkClient, err error){}
 	errorCallbacks = []func(sender *NetworkClient, err error){}
 	callbacks = make(map[reflect.Type][]any)
+
+	idMap = syncx.Map[*websocket.Conn, string]{}
+	clientMap = syncx.Map[*websocket.Conn, *NetworkClient]{}
 }
