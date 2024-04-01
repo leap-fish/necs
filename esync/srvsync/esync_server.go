@@ -9,7 +9,6 @@ import (
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/component"
 	"golang.org/x/sync/errgroup"
-	"nhooyr.io/websocket"
 	"reflect"
 	"slices"
 	"sync"
@@ -71,20 +70,23 @@ func NetworkSync(world donburi.World, entity *donburi.Entity, components ...donb
 	return nil
 }
 
+var syncMutex sync.Mutex
+
 // DoSync should be called by the server and will build world state and then attempt to network it out to all the peers.
 // This is done by serializing all the components of the entity, and preparing a network bundle for the clients.
 func DoSync() error {
 	errs, _ := errgroup.WithContext(context.Background())
 
-	router.PeerMap().Range(func(key *websocket.Conn, client *router.NetworkClient) bool {
+	syncMutex.Lock()
+	defer syncMutex.Unlock()
+
+	for _, client := range router.Peers() {
 		snapshot := buildSnapshot(client, world)
 		errs.Go(func() error {
 			err := client.SendMessage(snapshot)
 			return err
 		})
-		
-		return true
-	})
+	}
 
 	return errs.Wait()
 }
