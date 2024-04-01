@@ -16,15 +16,9 @@ type TypeMapper struct {
 	typeToId map[reflect.Type]uint
 	idToType map[uint]reflect.Type
 
+	mapMutex sync.Mutex
+
 	handle *codec.MsgpackHandle
-
-	dec       *codec.Decoder
-	decodeBuf *bytes.Buffer
-	decLock   sync.Mutex
-
-	enc       *codec.Encoder
-	encodeBuf *bytes.Buffer
-	encLock   sync.Mutex
 }
 
 // NewMapper initializes a type mapper.
@@ -46,11 +40,6 @@ func NewMapper(components map[uint]any) TypeMapper {
 		handle:   &codec.MsgpackHandle{},
 	}
 
-	cdb.encodeBuf = &bytes.Buffer{}
-	cdb.decodeBuf = &bytes.Buffer{}
-	cdb.dec = codec.NewDecoder(cdb.decodeBuf, cdb.handle)
-	cdb.enc = codec.NewEncoder(cdb.encodeBuf, cdb.handle)
-
 	return cdb
 }
 
@@ -60,6 +49,9 @@ func (db *TypeMapper) RegisterType(id uint, componentType reflect.Type) error {
 	if db.idToType[id] != nil {
 		return fmt.Errorf("cannot register mapping for component %s with id %d because it is reserved", componentType, id)
 	}
+
+	db.mapMutex.Lock()
+	defer db.mapMutex.Unlock()
 
 	db.typeToId[componentType] = id
 	db.idToType[id] = componentType
@@ -75,6 +67,9 @@ func (db *TypeMapper) Register(id uint, component any) error {
 		return fmt.Errorf("cannot register mapping for component %s with id %d because it is reserved", typeof, id)
 	}
 
+	db.mapMutex.Lock()
+	defer db.mapMutex.Unlock()
+
 	db.typeToId[typeof] = id
 	db.idToType[id] = typeof
 
@@ -83,48 +78,49 @@ func (db *TypeMapper) Register(id uint, component any) error {
 
 // Lookup finds the Type based on a component ID.
 func (db *TypeMapper) Lookup(id uint) reflect.Type {
+	db.mapMutex.Lock()
+	defer db.mapMutex.Unlock()
+
 	return db.idToType[id]
 }
 
 // LookupId finds the component ID from a Type.
 func (db *TypeMapper) LookupId(componentType reflect.Type) uint {
+	db.mapMutex.Lock()
+	defer db.mapMutex.Unlock()
+
 	return db.typeToId[componentType]
 }
 
 // Serialize a component to bytes that can be networked.
 func (db *TypeMapper) Serialize(component any) ([]byte, error) {
-	db.encLock.Lock()
-	defer db.encLock.Unlock()
-
 	componentType := reflect.TypeOf(component)
 	id := db.LookupId(componentType)
 	if id == 0 {
 		return nil, fmt.Errorf("component ID not found for type %s; ensure it is registered with the component typemapper", componentType)
 	}
 
-	db.encodeBuf.Reset()
+	encodeBuf := &bytes.Buffer{}
 
-	if err := db.enc.Encode(id); err != nil {
+	encoder := codec.NewEncoder(encodeBuf, db.handle)
+
+	if err := encoder.Encode(id); err != nil {
 		return nil, err
 	}
 
-	if err := db.enc.Encode(component); err != nil {
+	if err := encoder.Encode(component); err != nil {
 		return nil, err
 	}
 
-	return db.encodeBuf.Bytes(), nil
+	return encodeBuf.Bytes(), nil
 }
 
 // Deserialize a component by decoding its ID, and then the actual struct.
 func (db *TypeMapper) Deserialize(data []byte) (any, error) {
-	db.decLock.Lock()
-	defer db.decLock.Unlock()
-
-	db.decodeBuf.Reset()
-	db.decodeBuf.Write(data)
+	decoder := codec.NewDecoderBytes(data, db.handle)
 
 	var id uint
-	if err := db.dec.Decode(&id); err != nil {
+	if err := decoder.Decode(&id); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +130,7 @@ func (db *TypeMapper) Deserialize(data []byte) (any, error) {
 	}
 
 	instanced := reflect.New(component).Interface()
-	if err := db.dec.Decode(instanced); err != nil {
+	if err := decoder.Decode(instanced); err != nil {
 		return nil, err
 	}
 
