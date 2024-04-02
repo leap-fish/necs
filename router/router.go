@@ -26,9 +26,10 @@ var (
 
 	callbacks = make(map[reflect.Type][]any)
 
-	idMap     = make(map[*websocket.Conn]string)
-	clientMap = make(map[*websocket.Conn]*NetworkClient)
-	mapMutex  sync.Mutex
+	idMap          = make(map[*websocket.Conn]string)
+	idMapMutex     sync.Mutex
+	clientMap      = make(map[*websocket.Conn]*NetworkClient)
+	clientMapMutex sync.Mutex
 )
 
 // On adds a callback to be called whenever the specified message type T is received.
@@ -94,23 +95,22 @@ func ProcessMessage(sender *NetworkClient, msg []byte) error {
 }
 
 func Client(conn *websocket.Conn) *NetworkClient {
-	mapMutex.Lock()
-	defer mapMutex.Unlock()
+	clientMapMutex.Lock()
+	defer clientMapMutex.Unlock()
 
 	client, ok := clientMap[conn]
 	if ok {
 		return client
 	}
-
 	clientMap[conn] = NewNetworkClient(context.Background(), conn)
 	return clientMap[conn]
 }
 
-func Id(client *NetworkClient) string {
-	mapMutex.Lock()
-	defer mapMutex.Unlock()
+func GetId(conn *websocket.Conn) string {
+	idMapMutex.Lock()
+	defer idMapMutex.Unlock()
 
-	id, ok := idMap[client.Conn]
+	id, ok := idMap[conn]
 	if ok {
 		return id
 	}
@@ -119,7 +119,7 @@ func Id(client *NetworkClient) string {
 	_, _ = rand.Read(bytes)
 	id = fmt.Sprintf("%x", bytes[:10])
 
-	idMap[client.Conn] = id
+	idMap[conn] = id
 	return id
 }
 
@@ -128,8 +128,8 @@ func Id(client *NetworkClient) string {
 func Peers() []*NetworkClient {
 	var peers []*NetworkClient
 
-	mapMutex.Lock()
-	defer mapMutex.Unlock()
+	clientMapMutex.Lock()
+	defer clientMapMutex.Unlock()
 
 	for _, v := range clientMap {
 		peers = append(peers, v)
@@ -179,8 +179,8 @@ func CallDisconnect(sender *websocket.Conn, err error) {
 		go callback(client, err)
 	}
 
-	mapMutex.Lock()
-	defer mapMutex.Unlock()
+	clientMapMutex.Lock()
+	defer clientMapMutex.Unlock()
 
 	delete(idMap, sender)
 	delete(clientMap, sender)
@@ -200,8 +200,8 @@ func ResetRouter() {
 	errorCallbacks = []func(sender *NetworkClient, err error){}
 	callbacks = make(map[reflect.Type][]any)
 
-	mapMutex.Lock()
-	defer mapMutex.Unlock()
+	clientMapMutex.Lock()
+	defer clientMapMutex.Unlock()
 
 	idMap = make(map[*websocket.Conn]string)
 	clientMap = make(map[*websocket.Conn]*NetworkClient)

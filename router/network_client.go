@@ -7,12 +7,14 @@ import (
 )
 
 type NetworkClient struct {
+	id string
 	*websocket.Conn
 	ctx context.Context
 }
 
 func NewNetworkClient(ctx context.Context, underlying *websocket.Conn) *NetworkClient {
 	return &NetworkClient{
+		id:   GetId(underlying),
 		Conn: underlying,
 		ctx:  ctx,
 	}
@@ -42,5 +44,5 @@ func (c *NetworkClient) SendMessageBytes(msgBytes []byte) error {
 }
 
 func (c *NetworkClient) Id() string {
-	return Id(c)
+	return c.id
 }
