@@ -41,7 +41,10 @@ func (ws *WebSocketServer) Serve(addr string) error {
 func (ws *WebSocketServer) acceptFunc(w http.ResponseWriter, req *http.Request) {
 	conn, err := websocket.Accept(w, req, ws.options)
 	if err != nil {
-		ws.handler.OnError(req.Context(), nil, err)
+		return
+	}
+
+	if conn == nil {
 		return
 	}
 
