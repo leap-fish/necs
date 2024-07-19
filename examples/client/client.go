@@ -18,7 +18,7 @@ func main() {
 
 	router.On(func(sender *router.NetworkClient, message shared.TestMessage) {
 		log.Println("Testmessage: ", message)
-		sender.SendMessage(shared.TestMessage{"This is from the client"})
+		sender.SendMessage(shared.TestMessage{Message: "This is from the client"})
 	})
 
 	err := client.Start(func(conn *websocket.Conn) {
