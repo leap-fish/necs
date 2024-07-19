@@ -1,15 +1,13 @@
 package main
 
 import (
+	"log"
+
+	"github.com/leap-fish/necs/examples/shared"
 	"github.com/leap-fish/necs/router"
 	"github.com/leap-fish/necs/transports"
-	"log"
 	"nhooyr.io/websocket"
 )
-
-type TestMessage struct {
-	Message string
-}
 
 func main() {
 	client := transports.NewWsClientTransport("ws://localhost:7373")
@@ -18,9 +16,9 @@ func main() {
 		log.Println("Connected to the server!")
 	})
 
-	router.On[TestMessage](func(sender *router.NetworkClient, message TestMessage) {
+	router.On(func(sender *router.NetworkClient, message shared.TestMessage) {
 		log.Println("Testmessage: ", message)
-		sender.SendMessage(TestMessage{"This is from the client"})
+		sender.SendMessage(shared.TestMessage{"This is from the client"})
 	})
 
 	err := client.Start(func(conn *websocket.Conn) {
