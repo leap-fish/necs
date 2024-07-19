@@ -23,10 +23,13 @@ func main() {
 		log.Println("Testmessage: ", message)
 	})
 
+	router.OnError(func(sender *router.NetworkClient, err error) {
+		log.Printf("Message Error: %s", err.Error())
+	})
+
 	server := transports.NewWsServerTransport(7373, "", nil)
 	err := server.Start()
 	if err != nil {
 		log.Fatalf("Unable to dial: %s", err)
 	}
-
 }
