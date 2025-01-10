@@ -2,7 +2,8 @@ package wrapws
 
 import (
 	"context"
-	"nhooyr.io/websocket"
+
+	"github.com/coder/websocket"
 )
 
 type EventHandler interface {

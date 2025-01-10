@@ -3,7 +3,8 @@ package router
 import (
 	"context"
 	"fmt"
-	"nhooyr.io/websocket"
+
+	"github.com/coder/websocket"
 )
 
 type NetworkClient struct {

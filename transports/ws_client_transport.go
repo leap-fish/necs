@@ -2,11 +2,12 @@ package transports
 
 import (
 	"context"
+	"time"
+
+	"github.com/coder/websocket"
 	"github.com/leap-fish/necs/router"
 	"github.com/leap-fish/necs/wrapws"
 	"golang.org/x/sync/errgroup"
-	"nhooyr.io/websocket"
-	"time"
 )
 
 type WsClientTransport struct {

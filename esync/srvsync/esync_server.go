@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"reflect"
+	"slices"
+	"sync"
+	"sync/atomic"
+
 	"github.com/leap-fish/necs/esync"
 	"github.com/leap-fish/necs/router"
 	"github.com/yohamta/donburi"
 	"github.com/yohamta/donburi/component"
 	"golang.org/x/sync/errgroup"
-	"reflect"
-	"slices"
-	"sync"
-	"sync/atomic"
 )
 
 var NetworkIdCounter = atomic.Uint64{}

@@ -3,10 +3,11 @@ package transports
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/coder/websocket"
 	"github.com/leap-fish/necs/router"
 	"github.com/leap-fish/necs/wrapws"
-	"nhooyr.io/websocket"
-	"time"
 )
 
 type WsServerTransport struct {

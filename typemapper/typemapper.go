@@ -3,9 +3,10 @@ package typemapper
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/go-msgpack/codec"
 	"reflect"
 	"sync"
+
+	"github.com/hashicorp/go-msgpack/v2/codec"
 )
 
 // TypeMapper is used to map between registered IDs and components and
