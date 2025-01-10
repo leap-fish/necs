@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
+	"github.com/coder/websocket"
 	"github.com/leap-fish/necs/examples/shared"
 	"github.com/leap-fish/necs/router"
 	"github.com/leap-fish/necs/transports"
-	"nhooyr.io/websocket"
 )
 
 func main() {

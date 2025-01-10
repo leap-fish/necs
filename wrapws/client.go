@@ -3,8 +3,9 @@ package wrapws
 import (
 	"context"
 	"io"
-	"nhooyr.io/websocket"
 	"time"
+
+	"github.com/coder/websocket"
 )
 
 type WebSocketClient struct {

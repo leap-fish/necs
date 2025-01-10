@@ -4,8 +4,9 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"nhooyr.io/websocket"
 	"time"
+
+	"github.com/coder/websocket"
 )
 
 const maxMessageReadTime = time.Second * 30

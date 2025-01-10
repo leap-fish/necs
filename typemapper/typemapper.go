@@ -3,9 +3,10 @@ package typemapper
 import (
 	"bytes"
 	"fmt"
-	"github.com/hashicorp/go-msgpack/codec"
 	"reflect"
 	"sync"
+
+	"github.com/hashicorp/go-msgpack/v2/codec"
 )
 
 // TypeMapper is used to map between registered IDs and components and
@@ -108,6 +109,22 @@ func (db *TypeMapper) Serialize(component any) ([]byte, error) {
 		return nil, err
 	}
 
+	// if customEncoder, ok := component.(EncodeDecoder); ok {
+	// 	encoded, err := customEncoder.Encode()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	// if _, err := encodeBuf.Write(encoded); err != nil {
+	// 	// 	return nil, err
+	// 	// }
+	// 	if err := encoder.Encode(encoded); err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	fmt.Printf("message: %#v\n", encodeBuf.Bytes())
+	// } else {
+	// }
 	if err := encoder.Encode(component); err != nil {
 		return nil, err
 	}
@@ -117,6 +134,8 @@ func (db *TypeMapper) Serialize(component any) ([]byte, error) {
 
 // Deserialize a component by decoding its ID, and then the actual struct.
 func (db *TypeMapper) Deserialize(data []byte) (any, error) {
+	// buf := bytes.NewBuffer(data)
+	// decoder := codec.NewDecoder(buf, db.handle)
 	decoder := codec.NewDecoderBytes(data, db.handle)
 
 	var id uint
@@ -130,6 +149,24 @@ func (db *TypeMapper) Deserialize(data []byte) (any, error) {
 	}
 
 	instanced := reflect.New(component).Interface()
+	// if customDecoder, ok := instanced.(EncodeDecoder); ok {
+	// 	var remaining []byte
+	// 	if err := decoder.Decode(remaining); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	// remaining, err := io.ReadAll(buf)
+	// 	// if err != nil {
+	// 	// 	fmt.Printf("read all buf: %s\n", err)
+	// 	// 	return nil, err
+	// 	// }
+
+	// 	if err := customDecoder.Decode(remaining); err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	fmt.Printf("instance: %v\n", instanced)
+	// } else {
+	// }
 	if err := decoder.Decode(instanced); err != nil {
 		return nil, err
 	}

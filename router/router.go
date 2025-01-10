@@ -5,11 +5,12 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/leap-fish/necs/typeid"
-	"github.com/leap-fish/necs/typemapper"
-	"nhooyr.io/websocket"
 	"reflect"
 	"sync"
+
+	"github.com/coder/websocket"
+	"github.com/leap-fish/necs/typeid"
+	"github.com/leap-fish/necs/typemapper"
 )
 
 var (
