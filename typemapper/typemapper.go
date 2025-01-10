@@ -118,8 +118,6 @@ func (db *TypeMapper) Serialize(component any) ([]byte, error) {
 
 // Deserialize a component by decoding its ID, and then the actual struct.
 func (db *TypeMapper) Deserialize(data []byte) (any, error) {
-	// buf := bytes.NewBuffer(data)
-	// decoder := codec.NewDecoder(buf, db.handle)
 	decoder := codec.NewDecoderBytes(data, db.handle)
 
 	var id uint
