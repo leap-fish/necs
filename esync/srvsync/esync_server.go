@@ -45,6 +45,8 @@ func AddNetworkFilter(filter func(client *router.NetworkClient, entry *donburi.E
 // NetworkInterp sets this entity up for interpolation of the given component types.
 // This does *not* a replacement for [srvsync.NetworkSync] and only specifies further
 // detail as to how to handle these components.
+//
+// > The components passed must have been registered beforehand using [esync.RegisterInterpolated]
 func NetworkInterp(world donburi.World, entity *donburi.Entity, components ...donburi.IComponentType) {
 	entry := world.Entry(*entity)
 	entry.AddComponent(esync.InterpComponent)

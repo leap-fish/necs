@@ -53,27 +53,57 @@ var (
 	NetworkIdComponent = donburi.NewComponentType[NetworkId]()
 )
 
-// RegisterInterpolated maps the component to the provided ID so the
+// RegisterInterpolated creates a contract that the client and server understand
+// by assigning it an ID that the client knows to interpolate your passed component type
+// as well as how to interpolate the component values by passing the lerp function.
+//
+// For example you can provide the following for a basic Vector2:
+//
+//	var PositionComponent = donburi.NewComponentType[Vector2]()
+//
+//	type Vector2 struct {
+//		X, Y float64
+//	}
+//
+//	func lerp(a, b, t float64) float64 {
+//		return (1.0-t)*a + b*t
+//	}
+//
+//	esync.RegisterInterpolated(1, PositionComponent, func(from, to Vector2, delta float64) *Vector2 {
+//		return &Vector2{
+//			X: lerp(from.X, to.X, delta),
+//			T: lerp(from.Y, to.Y, delta),
+//		}
+//	})
 func RegisterInterpolated[T any](id uint, comp *donburi.ComponentType[T], lerp LerpFn[T]) error {
 	return interpolated.RegisterInterpolatedComponent(id, comp, lerp)
 }
 
+// LookInterpId returns the interpolation ID for the given type, if not present
+// then 0 is returned.
 func LookupInterpId(typ reflect.Type) uint {
 	return interpolated.LookupId(typ)
 }
 
+// LookupInterpType returns the component type for the given interpolation ID,
+// if not present then an empty reflect.Type is returned.
 func LookupInterpType(id uint) reflect.Type {
 	return interpolated.LookupType(id)
 }
 
+// LookupInterpSetter returns the setter function for the given interpolation ID.
+// This should always be type [esync.LerpFn]
 func LookupInterpSetter(id uint) any {
 	return interpolated.LookupSetter(id)
 }
 
+// RegisteredInterpId returns true if the given interpolation ID is registered.
 func RegisteredInterpId(id uint) bool {
 	return interpolated.RegisteredId(id)
 }
 
+// RegisteredInterpType returns true if the given component type is registered for
+// interpolation.
 func RegisteredInterpType(typ reflect.Type) bool {
 	return interpolated.RegisteredType(typ)
 }
