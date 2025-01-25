@@ -42,6 +42,20 @@ func AddNetworkFilter(filter func(client *router.NetworkClient, entry *donburi.E
 	filterFuncs = append(filterFuncs, filter)
 }
 
+// NetworkInterp sets this entity up for interpolation of the given component types.
+// This does *not* a replacement for [srvsync.NetworkSync] and only specifies further
+// detail as to how to handle these components.
+func NetworkInterp(world donburi.World, entity *donburi.Entity, components ...donburi.IComponentType) {
+	entry := world.Entry(*entity)
+	entry.AddComponent(esync.InterpComponent)
+	esync.InterpComponent.Set(entry, esync.NewInterpData(components...))
+
+	syncEntMtx.Lock()
+	defer syncEntMtx.Unlock()
+
+	syncEntities[*entity] = append(syncEntities[*entity], esync.InterpComponent)
+}
+
 // NetworkSync marks an entity and a list for network synchronization.
 // This means that the esync package will automatically try to send state updates to the connected clients.
 // Note that donburi tags are not supported for synchronization, as they contain no data.
