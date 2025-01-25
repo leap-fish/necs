@@ -31,10 +31,6 @@ type multiHistoryData struct {
 	history map[uint][]componentTimeData
 }
 
-func keyForType(typ reflect.Type) uint {
-	return esync.LookupId(typ)
-}
-
 var (
 	requests     int64
 	totalLatency float64
@@ -67,11 +63,8 @@ func NewInterpolateSystem() ecs.System {
 			multiHistory := multiHistoryComponent.Get(e)
 			interpolated := esync.InterpComponent.Get(e)
 
-			// fmt.Printf("keys: %#v\n", interpolated.ComponentKeys())
 			for _, key := range interpolated.ComponentKeys() {
-
-				compType := esync.LookupType(key)
-				// comp := (reflect.ValueOf(compType).Interface()).(donburi.IComponentType)
+				compType := esync.LookupInterpType(key)
 				comp, ok := esync.Registered(compType)
 				if !ok {
 					panic(fmt.Sprintf("unregistered component %T", compType))
@@ -122,19 +115,18 @@ func NewInterpolateSystem() ecs.System {
 				// compared to our next position.
 				t := float64(now.Sub(prev.ts)) / float64(delayed.ts.Sub(next.ts))
 
-				setter := esync.LookupSetter(key)
+				setter := esync.LookupInterpSetter(key)
 				v := reflect.ValueOf(setter)
-				_ = v.Call([]reflect.Value{
-					reflect.ValueOf(e),
+				values := v.Call([]reflect.Value{
 					reflect.ValueOf(next.value),
 					reflect.ValueOf(delayed.value),
 					reflect.ValueOf(t),
 				})
 
-				// gotVal := got[0]
-				// fmt.Printf("got: %v\n", gotVal)
-
-				// e.SetComponent(comp.typ, unsafe.Pointer(&gotVal))
+				// Return value from the setter should be the interpolated value
+				// now set the component.
+				got := values[0].UnsafePointer()
+				e.SetComponent(comp, got)
 			}
 		}
 	}

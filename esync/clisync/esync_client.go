@@ -10,6 +10,8 @@ import (
 	"github.com/yohamta/donburi"
 )
 
+const MaxHistorySize = 32
+
 func clientUpdateWorldState(world donburi.World, state esync.WorldSnapshot) error {
 	for _, ent := range state {
 		var components []any
@@ -29,7 +31,6 @@ func clientUpdateWorldState(world donburi.World, state esync.WorldSnapshot) erro
 
 func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components []any) {
 	ctypes := make([]donburi.IComponentType, 0)
-	var interp *esync.InterpData
 
 	for _, componentData := range components {
 		componentType := reflect.TypeOf(componentData)
@@ -39,16 +40,8 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 			continue
 		}
 
-		if componentType == reflect.TypeOf(&esync.InterpData{}) {
-			fmt.Printf("found interp data\n")
-			interp = any(ctype).(*esync.InterpData)
-			continue
-		}
-
 		ctypes = append(ctypes, ctype)
-
 	}
-	_ = interp // testing stuff out here
 
 	entity := esync.FindByNetworkId(world, networkId)
 	var entry *donburi.Entry
@@ -75,7 +68,7 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 				continue
 			}
 
-			key := esync.LookupId(reflect.TypeOf(data))
+			key := esync.LookupInterpId(reflect.TypeOf(data))
 
 			// Add the base value for this component if it doesn't have one
 			if !entry.HasComponent(ctypes[i]) {
@@ -102,12 +95,11 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 	}
 }
 
-const MaxHistorySize = 32
-
 func RegisterClient(world donburi.World) {
 	router.On[esync.WorldSnapshot](func(sender *router.NetworkClient, message esync.WorldSnapshot) {
 		err := clientUpdateWorldState(world, message)
 		if err != nil {
+			panic(err)
 			// TODO: Add back error handling here
 		}
 

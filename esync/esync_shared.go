@@ -41,7 +41,8 @@ type SerializedEntity struct {
 }
 type WorldSnapshot []SerializedEntity
 
-type LerpFn[T any] func(*donburi.Entry, T, T, float64)
+// type LerpFn[T any] func(entry *donburi.Entry, from T, to T, delta float64)
+type LerpFn[T any] func(from T, to T, delta float64) *T
 
 var NetworkEntityQuery = donburi.NewQuery(filter.Contains(NetworkIdComponent))
 
@@ -61,19 +62,19 @@ func RegisterInterpolated[T any](id uint, comp *donburi.ComponentType[T], lerp .
 	}
 }
 
-func LookupId(typ reflect.Type) uint {
+func LookupInterpId(typ reflect.Type) uint {
 	return interpolated.LookupId(typ)
 }
 
-func LookupType(id uint) reflect.Type {
+func LookupInterpType(id uint) reflect.Type {
 	return interpolated.LookupType(id)
 }
 
-func LookupSetter(id uint) any {
+func LookupInterpSetter(id uint) any {
 	return interpolated.LookupSetter(id)
 }
 
-func RegisteredInterp(id uint) bool {
+func RegisteredInterpId(id uint) bool {
 	return interpolated.RegisteredId(id)
 }
 
