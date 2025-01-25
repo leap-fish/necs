@@ -14,62 +14,68 @@ import (
 )
 
 var (
-	multiHistoryComponent = donburi.NewComponentType[multiHistoryData]()
+	timeCacheComponent = donburi.NewComponentType[timeCacheData]()
 )
-
-type InterpolationData struct {
-	Components []uint32
-}
 
 type componentTimeData struct {
 	value any
 	ts    time.Time
 }
 
-type multiHistoryData struct {
-	// Key is the component type
+// timeCacheData contains a map which the key matches an interpolation
+// component key and contains a list of historic values for that type.
+type timeCacheData struct {
+	// map[component key]historic values
 	history map[uint][]componentTimeData
 }
 
 var (
 	requests     int64
-	totalLatency float64
+	totalLatency int64
 	avgLatency   float64
 	delay        int
 	lastSnapshot time.Time = time.Now()
 )
 
+// calculateDelay sets the delay which is an index based on the average latency in seconds
 func calculateDelay(now time.Time) {
 	requests++
-	totalLatency += float64(time.Since(lastSnapshot))
 
-	avgLatency = totalLatency / float64(requests)
+	totalLatency += int64(time.Since(lastSnapshot))
+	avgLatency = float64(totalLatency) / float64(requests)
 
 	delay = int(math.Floor(avgLatency / float64(time.Second)))
 	lastSnapshot = now
 }
 
+// NewInterpolateSystem returns an ecs system that should be registered if you
+// have any client-side interpolating components.
 func NewInterpolateSystem() ecs.System {
 	query := donburi.NewQuery(filter.Contains(
 		esync.NetworkIdComponent,
 		esync.InterpComponent,
-		multiHistoryComponent,
+		timeCacheComponent,
 	))
 
 	return func(ecs *ecs.ECS) {
 		now := time.Now()
 
 		for e := range query.Iter(ecs.World) {
-			multiHistory := multiHistoryComponent.Get(e)
+			if !e.Valid() {
+				continue
+			}
+
+			multiHistory := timeCacheComponent.Get(e)
 			interpolated := esync.InterpComponent.Get(e)
 
+			// Loop through each of this entry's interpolated components and
+			// interpolate them using their lerp functions.
 			for _, key := range interpolated.ComponentKeys() {
 				compType := esync.LookupInterpType(key)
 				comp, ok := esync.Registered(compType)
 				if !ok {
 					panic(fmt.Sprintf("unregistered component %T", compType))
 				}
-
 				if !e.HasComponent(comp) {
 					continue
 				}
@@ -78,11 +84,11 @@ func NewInterpolateSystem() ecs.System {
 					prev, next, delayed *componentTimeData
 				)
 
+				// Get the historic buffer for this component type.
 				buf := multiHistory.history[key]
 				if len(buf) <= 1 {
 					continue // to fix a rare panic we skip this
 				}
-
 				for i := len(buf) - 1; i >= 0; i-- {
 					if buf[i].ts.Compare(now) <= 0 {
 						if len(buf) <= i {

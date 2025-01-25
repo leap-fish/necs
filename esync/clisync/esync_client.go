@@ -31,8 +31,9 @@ func clientUpdateWorldState(world donburi.World, state esync.WorldSnapshot) erro
 
 func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components []any) {
 	ctypes := make([]donburi.IComponentType, 0)
+	refTypes := make([]reflect.Type, len(components))
 
-	for _, componentData := range components {
+	for i, componentData := range components {
 		componentType := reflect.TypeOf(componentData)
 		ctype, ok := esync.Registered(componentType)
 		if !ok {
@@ -41,6 +42,7 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 		}
 
 		ctypes = append(ctypes, ctype)
+		refTypes[i] = componentType
 	}
 
 	entity := esync.FindByNetworkId(world, networkId)
@@ -56,32 +58,37 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 	calculateDelay(now)
 
 	if entry != nil && world.Valid(entity) {
+		interpolated := entry.HasComponent(esync.InterpComponent)
+
 		for i := 0; i < len(components); i++ {
 			data := components[i]
 			if data == nil {
 				panic("meow")
 			}
 
-			ok := esync.RegisteredInterpType(reflect.TypeOf(data))
-			if !ok || !entry.HasComponent(esync.InterpComponent) {
+			ok := esync.RegisteredInterpType(refTypes[i])
+			if !ok || !interpolated {
 				entry.SetComponent(ctypes[i], esync.ComponentFromVal(ctypes[i], data))
 				continue
 			}
 
-			key := esync.LookupInterpId(reflect.TypeOf(data))
-
+			key := esync.LookupInterpId(refTypes[i])
 			// Add the base value for this component if it doesn't have one
 			if !entry.HasComponent(ctypes[i]) {
 				entry.SetComponent(ctypes[i], ctypes[i].New())
 			}
 
-			if !entry.HasComponent(multiHistoryComponent) {
-				donburi.Add(entry, multiHistoryComponent, &multiHistoryData{
+			// Add a component cache to keep track of historic values for this
+			// interpolated component
+			if !entry.HasComponent(timeCacheComponent) {
+				donburi.Add(entry, timeCacheComponent, &timeCacheData{
 					history: make(map[uint][]componentTimeData),
 				})
 			}
 
-			multHistory := multiHistoryComponent.Get(entry)
+			// Append the new value to our historic cache with its associated
+			// timestamp of when we received this
+			multHistory := timeCacheComponent.Get(entry)
 			multHistory.history[key] = append(multHistory.history[key], componentTimeData{
 				value: data,
 				ts:    now,

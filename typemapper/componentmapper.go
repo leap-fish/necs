@@ -1,10 +1,17 @@
 package typemapper
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 
 	"github.com/yohamta/donburi"
+)
+
+var (
+	ErrNilLerpFunction       = errors.New("lerp function nil")
+	ErrMalformedLerpFunction = errors.New("malformed lerp function")
 )
 
 type interpolatedComponentData struct {
@@ -29,9 +36,17 @@ func NewComponentMapper() *ComponentMapper {
 // RegisterInterpolatedComponent registers the given component and setter with
 // the provided ID, note that these IDs don't interfere with the normal esync.Register
 func (c *ComponentMapper) RegisterInterpolatedComponent(id uint, comp donburi.IComponentType, lerp any) error {
-	// if lerp == nil {
-	// 	return fmt.Errorf("invalid lerp function")
-	// }
+	if lerp == nil {
+		return fmt.Errorf("must provide lerp function: %w", ErrNilLerpFunction)
+	}
+
+	typ := reflect.TypeOf(lerp)
+	if typ.Kind() != reflect.Func {
+		return fmt.Errorf("lerp must be a function: %w", ErrMalformedLerpFunction)
+	}
+	if typ.NumIn() != 3 {
+		return fmt.Errorf("lerp function must have 3 arguments: %w", ErrMalformedLerpFunction)
+	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()

@@ -18,7 +18,6 @@ type InterpData struct {
 func NewInterpData(components ...donburi.IComponentType) *InterpData {
 	ids := []uint{}
 	for i := range components {
-		// typeof := reflect.TypeOf()
 		ids = append(ids, interpolated.LookupId(components[i].Typ()))
 	}
 
@@ -41,7 +40,7 @@ type SerializedEntity struct {
 }
 type WorldSnapshot []SerializedEntity
 
-// type LerpFn[T any] func(entry *donburi.Entry, from T, to T, delta float64)
+// LerpFn is used by the InterpolateSystem to properly lerp your component
 type LerpFn[T any] func(from T, to T, delta float64) *T
 
 var NetworkEntityQuery = donburi.NewQuery(filter.Contains(NetworkIdComponent))
@@ -54,12 +53,9 @@ var (
 	NetworkIdComponent = donburi.NewComponentType[NetworkId]()
 )
 
-func RegisterInterpolated[T any](id uint, comp *donburi.ComponentType[T], lerp ...LerpFn[T]) error {
-	if len(lerp) == 0 {
-		return interpolated.RegisterInterpolatedComponent(id, comp, nil)
-	} else {
-		return interpolated.RegisterInterpolatedComponent(id, comp, lerp[0])
-	}
+// RegisterInterpolated maps the component to the provided ID so the
+func RegisterInterpolated[T any](id uint, comp *donburi.ComponentType[T], lerp LerpFn[T]) error {
+	return interpolated.RegisterInterpolatedComponent(id, comp, lerp)
 }
 
 func LookupInterpId(typ reflect.Type) uint {
