@@ -82,7 +82,7 @@ func applyEntityDiff(world donburi.World, networkId esync.NetworkId, components 
 			// interpolated component
 			if !entry.HasComponent(timeCacheComponent) {
 				donburi.Add(entry, timeCacheComponent, &timeCacheData{
-					history: make(map[uint][]componentTimeData),
+					history: make(map[uint8][]componentTimeData),
 				})
 			}
 

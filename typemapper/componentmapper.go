@@ -22,20 +22,20 @@ type interpolatedComponentData struct {
 type ComponentMapper struct {
 	lock sync.Mutex
 
-	typeToId      map[reflect.Type]uint
-	idToComponent map[uint]interpolatedComponentData
+	typeToId      map[reflect.Type]uint8
+	idToComponent map[uint8]interpolatedComponentData
 }
 
 func NewComponentMapper() *ComponentMapper {
 	return &ComponentMapper{
-		typeToId:      make(map[reflect.Type]uint),
-		idToComponent: make(map[uint]interpolatedComponentData),
+		typeToId:      make(map[reflect.Type]uint8),
+		idToComponent: make(map[uint8]interpolatedComponentData),
 	}
 }
 
 // RegisterInterpolatedComponent registers the given component and setter with
 // the provided ID, note that these IDs don't interfere with the normal esync.Register
-func (c *ComponentMapper) RegisterInterpolatedComponent(id uint, comp donburi.IComponentType, lerp any) error {
+func (c *ComponentMapper) RegisterInterpolatedComponent(id uint8, comp donburi.IComponentType, lerp any) error {
 	if lerp == nil {
 		return fmt.Errorf("must provide lerp function: %w", ErrNilLerpFunction)
 	}
@@ -60,7 +60,7 @@ func (c *ComponentMapper) RegisterInterpolatedComponent(id uint, comp donburi.IC
 	return nil
 }
 
-func (c *ComponentMapper) LookupSetter(id uint) any {
+func (c *ComponentMapper) LookupSetter(id uint8) any {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -75,7 +75,7 @@ func (c *ComponentMapper) RegisteredType(typ reflect.Type) bool {
 	return ok
 }
 
-func (c *ComponentMapper) RegisteredId(id uint) bool {
+func (c *ComponentMapper) RegisteredId(id uint8) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -83,14 +83,14 @@ func (c *ComponentMapper) RegisteredId(id uint) bool {
 	return ok
 }
 
-func (c *ComponentMapper) LookupType(id uint) reflect.Type {
+func (c *ComponentMapper) LookupType(id uint8) reflect.Type {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	return c.idToComponent[id].typ.Typ()
 }
 
-func (c *ComponentMapper) LookupId(typ reflect.Type) uint {
+func (c *ComponentMapper) LookupId(typ reflect.Type) uint8 {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

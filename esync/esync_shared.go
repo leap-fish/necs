@@ -1,6 +1,8 @@
 package esync
 
 import (
+	"bytes"
+	"encoding/binary"
 	"reflect"
 	"unsafe"
 
@@ -12,13 +14,40 @@ import (
 var InterpComponent = donburi.NewComponentType[InterpData]()
 
 type InterpData struct {
-	Components []uint
+	Components []uint8
+}
+
+func (id *InterpData) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.Grow(len(id.Components))
+
+	for i := range id.Components {
+		binary.Write(&buf, binary.LittleEndian, id.Components[i])
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (id *InterpData) UnmarshalBinary(data []byte) error {
+	buf := bytes.NewReader(data)
+
+	id.Components = make([]uint8, buf.Len())
+	for i := 0; i < len(id.Components); i++ {
+		binary.Read(buf, binary.LittleEndian, &id.Components[i])
+	}
+
+	return nil
 }
 
 func NewInterpData(components ...donburi.IComponentType) *InterpData {
-	ids := []uint{}
+	ids := []uint8{}
 	for i := range components {
-		ids = append(ids, interpolated.LookupId(components[i].Typ()))
+		key := interpolated.LookupId(components[i].Typ())
+		if key == 0 {
+			continue
+		}
+
+		ids = append(ids, key)
 	}
 
 	return &InterpData{
@@ -26,7 +55,7 @@ func NewInterpData(components ...donburi.IComponentType) *InterpData {
 	}
 }
 
-func (i *InterpData) ComponentKeys() []uint {
+func (i *InterpData) ComponentKeys() []uint8 {
 	return i.Components
 }
 
@@ -75,30 +104,30 @@ var (
 //			T: lerp(from.Y, to.Y, delta),
 //		}
 //	})
-func RegisterInterpolated[T any](id uint, comp *donburi.ComponentType[T], lerp LerpFn[T]) error {
+func RegisterInterpolated[T any](id uint8, comp *donburi.ComponentType[T], lerp LerpFn[T]) error {
 	return interpolated.RegisterInterpolatedComponent(id, comp, lerp)
 }
 
 // LookInterpId returns the interpolation ID for the given type, if not present
 // then 0 is returned.
-func LookupInterpId(typ reflect.Type) uint {
+func LookupInterpId(typ reflect.Type) uint8 {
 	return interpolated.LookupId(typ)
 }
 
 // LookupInterpType returns the component type for the given interpolation ID,
 // if not present then an empty reflect.Type is returned.
-func LookupInterpType(id uint) reflect.Type {
+func LookupInterpType(id uint8) reflect.Type {
 	return interpolated.LookupType(id)
 }
 
 // LookupInterpSetter returns the setter function for the given interpolation ID.
 // This should always be type [esync.LerpFn]
-func LookupInterpSetter(id uint) any {
+func LookupInterpSetter(id uint8) any {
 	return interpolated.LookupSetter(id)
 }
 
 // RegisteredInterpId returns true if the given interpolation ID is registered.
-func RegisteredInterpId(id uint) bool {
+func RegisteredInterpId(id uint8) bool {
 	return interpolated.RegisteredId(id)
 }
 
