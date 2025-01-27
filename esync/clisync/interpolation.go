@@ -26,7 +26,7 @@ type componentTimeData struct {
 // component key and contains a list of historic values for that type.
 type timeCacheData struct {
 	// map[component key]historic values
-	history map[uint8][]componentTimeData
+	history [math.MaxUint8][]componentTimeData
 }
 
 var (
