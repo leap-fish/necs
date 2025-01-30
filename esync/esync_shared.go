@@ -82,32 +82,6 @@ var (
 	NetworkIdComponent = donburi.NewComponentType[NetworkId]()
 )
 
-// RegisterInterpolated creates a contract that the client and server understand
-// by assigning it an ID that the client knows to interpolate your passed component type
-// as well as how to interpolate the component values by passing the lerp function.
-//
-// For example you can provide the following for a basic Vector2:
-//
-//	var PositionComponent = donburi.NewComponentType[Vector2]()
-//
-//	type Vector2 struct {
-//		X, Y float64
-//	}
-//
-//	func lerp(a, b, t float64) float64 {
-//		return (1.0-t)*a + b*t
-//	}
-//
-//	esync.RegisterInterpolated(1, PositionComponent, func(from, to Vector2, delta float64) *Vector2 {
-//		return &Vector2{
-//			X: lerp(from.X, to.X, delta),
-//			T: lerp(from.Y, to.Y, delta),
-//		}
-//	})
-func RegisterInterpolated[T any](id uint8, comp *donburi.ComponentType[T], lerp LerpFn[T]) error {
-	return interpolated.RegisterInterpolatedComponent(id, comp, lerp)
-}
-
 // LookInterpId returns the interpolation ID for the given type, if not present
 // then 0 is returned.
 func LookupInterpId(typ reflect.Type) uint8 {
@@ -142,15 +116,51 @@ func Registered(componentType reflect.Type) (donburi.IComponentType, bool) {
 	return ctype, ok
 }
 
+type RegisterOption[T any] func(*donburi.ComponentType[T])
+
+// WithInterpFn will utilize the given lerp function for client-side interpolation
+// when registering with a component.
+//
+// For example you can provide the following for a basic Position Component:
+//
+//	var PositionComponent = donburi.NewComponentType[Vector2]()
+//
+//	type Vector2 struct {
+//		X, Y float64
+//	}
+//
+//	func lerp(a, b, t float64) float64 {
+//		return (1.0-t)*a + b*t
+//	}
+//
+//	func lerpVec2(from, to Vector2, delta float64) *Vector2 {
+//		return &Vector2{
+//			X: lerp(from.X, to.X, delta),
+//			T: lerp(from.Y, to.Y, delta),
+//		}
+//	}
+//
+//	esync.RegisterComponent(10, Vector2{}, PositionComponent, esync.WithInterpFn(10, lerpVec2))
+func WithInterpFn[T any](id uint8, fn LerpFn[T]) RegisterOption[T] {
+	return func(ctype *donburi.ComponentType[T]) {
+		interpolated.RegisterInterpolatedComponent(id, ctype, fn)
+	}
+}
+
 // RegisterComponent registers a component for use with esync. Make sure the client and server have the same definition of components.
 // Note that ID 1 is reserved for the NetworkId component used by esync.
-func RegisterComponent(id uint, component any, ctype donburi.IComponentType) error {
+func RegisterComponent[T any](id uint, component any, ctype *donburi.ComponentType[T], opt ...RegisterOption[T]) error {
 	typ := reflect.TypeOf(component)
 	err := Mapper.RegisterType(id, typ)
 	if err != nil {
 		return err
 	}
 	registered[typ] = ctype
+
+	// Call the options
+	for _, o := range opt {
+		o(ctype)
+	}
 
 	return nil
 }

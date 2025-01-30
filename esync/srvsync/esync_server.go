@@ -42,27 +42,33 @@ func AddNetworkFilter(filter func(client *router.NetworkClient, entry *donburi.E
 	filterFuncs = append(filterFuncs, filter)
 }
 
-// NetworkInterp sets this entity up for interpolation of the given component types.
-// This does *not* a replacement for [srvsync.NetworkSync] and only specifies further
-// detail as to how to handle these components.
+// SyncOption acts as an optional function parameter for [NetworkSync]
+type SyncOption func(*donburi.Entity) []donburi.IComponentType
+
+// WithInterp passes the following components along to the belonging NetworkSync
+// function as well as specifying that the given components are to be interpolated
+// on the client-side.
 //
-// > The components passed must have been registered beforehand using [esync.RegisterInterpolated]
-func NetworkInterp(world donburi.World, entity *donburi.Entity, components ...donburi.IComponentType) {
-	entry := world.Entry(*entity)
-	entry.AddComponent(esync.InterpComponent)
-	esync.InterpComponent.Set(entry, esync.NewInterpData(components...))
+// It is assumed that these components have been registered beforehand using
+// [esync.RegisterInterpolated].
+func WithInterp(components ...donburi.IComponentType) SyncOption {
+	return func(entity *donburi.Entity) []donburi.IComponentType {
+		entry := world.Entry(*entity)
+		if !entry.HasComponent(esync.InterpComponent) {
+			entry.AddComponent(esync.InterpComponent)
+		}
 
-	syncEntMtx.Lock()
-	defer syncEntMtx.Unlock()
+		esync.InterpComponent.Set(entry, esync.NewInterpData(components...))
 
-	syncEntities[*entity] = append(syncEntities[*entity], esync.InterpComponent)
+		return append([]donburi.IComponentType{esync.InterpComponent}, components...)
+	}
 }
 
 // NetworkSync marks an entity and a list for network synchronization.
 // This means that the esync package will automatically try to send state updates to the connected clients.
 // Note that donburi tags are not supported for synchronization, as they contain no data.
 // This will return an error if the entity does not have all the components being synced.
-func NetworkSync(world donburi.World, entity *donburi.Entity, components ...donburi.IComponentType) error {
+func NetworkSync(world donburi.World, entity *donburi.Entity, components ...any) error {
 	// Increments the Network ID counter to prevent reusing the ids
 	NetworkIdCounter.Add(1)
 
@@ -72,17 +78,26 @@ func NetworkSync(world donburi.World, entity *donburi.Entity, components ...donb
 	entry.AddComponent(esync.NetworkIdComponent)
 	esync.NetworkIdComponent.SetValue(entry, esync.NetworkId(networkId))
 
+	// Create a list of components to sync
+	var foundComponents []donburi.IComponentType
 	for _, listComponent := range components {
-		if !entry.HasComponent(listComponent) {
-			return fmt.Errorf("entity %d does not have the component %s", entry.Id(), listComponent.Name())
+		if opt, ok := listComponent.(SyncOption); ok {
+			foundComponents = append(foundComponents, opt(entity)...)
+		}
+
+		if comp, ok := listComponent.(donburi.IComponentType); ok {
+			if !entry.HasComponent(comp) {
+				return fmt.Errorf("entity %d does not have the component %s", entry.Id(), comp.Name())
+			}
+			foundComponents = append(foundComponents, comp)
 		}
 	}
 
-	components = append(components, esync.NetworkIdComponent)
+	foundComponents = append(foundComponents, esync.NetworkIdComponent)
 
 	syncEntMtx.Lock()
 	defer syncEntMtx.Unlock()
-	syncEntities[*entity] = components
+	syncEntities[*entity] = foundComponents
 
 	return nil
 }
