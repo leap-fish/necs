@@ -149,6 +149,9 @@ func WithInterpFn[T any](id uint8, fn LerpFn[T]) RegisterOption[T] {
 
 // RegisterComponent registers a component for use with esync. Make sure the client and server have the same definition of components.
 // Note that ID 1 is reserved for the NetworkId component used by esync.
+//
+// Optionally you may provide an optional [WithInterpFn] to register this component
+// for interpolation.
 func RegisterComponent[T any](id uint, component any, ctype *donburi.ComponentType[T], opt ...RegisterOption[T]) error {
 	typ := reflect.TypeOf(component)
 	err := Mapper.RegisterType(id, typ)

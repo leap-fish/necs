@@ -50,7 +50,7 @@ type SyncOption func(*donburi.Entity) []donburi.IComponentType
 // on the client-side.
 //
 // It is assumed that these components have been registered beforehand using
-// [esync.RegisterInterpolated].
+// [esync.RegisterComponent] and [esync.WithInterpFn].
 func WithInterp(components ...donburi.IComponentType) SyncOption {
 	return func(entity *donburi.Entity) []donburi.IComponentType {
 		entry := world.Entry(*entity)
@@ -64,10 +64,18 @@ func WithInterp(components ...donburi.IComponentType) SyncOption {
 	}
 }
 
-// NetworkSync marks an entity and a list for network synchronization.
+// NetworkSync marks an entity and a list of components for network synchronization.
 // This means that the esync package will automatically try to send state updates to the connected clients.
+//
 // Note that donburi tags are not supported for synchronization, as they contain no data.
 // This will return an error if the entity does not have all the components being synced.
+//
+// Optionally you may provide [WithInterp] with a list of components as well to mark
+// those components for interpolation as well as network synchronization. This assumes
+// that these components have already been registered for interpolation beforehand
+// using [esync.RegisterComponent] and [esync.WithInterpFn].
+//
+// > Components that are passed using [WithInterp] do not need to be passed again.
 func NetworkSync(world donburi.World, entity *donburi.Entity, components ...any) error {
 	// Increments the Network ID counter to prevent reusing the ids
 	NetworkIdCounter.Add(1)
