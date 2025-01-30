@@ -122,8 +122,7 @@ func NewInterpolateSystem() ecs.System {
 				t := float64(now.Sub(prev.ts)) / float64(delayed.ts.Sub(next.ts))
 
 				setter := esync.LookupInterpSetter(key)
-				v := reflect.ValueOf(setter)
-				values := v.Call([]reflect.Value{
+				values := setter.Call([]reflect.Value{
 					reflect.ValueOf(next.value),
 					reflect.ValueOf(delayed.value),
 					reflect.ValueOf(t),

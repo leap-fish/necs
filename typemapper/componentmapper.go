@@ -3,6 +3,7 @@ package typemapper
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 
@@ -16,20 +17,19 @@ var (
 
 type interpolatedComponentData struct {
 	typ    donburi.IComponentType
-	setter any
+	setter reflect.Value
 }
 
 type ComponentMapper struct {
-	lock sync.Mutex
+	mutex sync.Mutex
 
 	typeToId      map[reflect.Type]uint8
-	idToComponent map[uint8]interpolatedComponentData
+	idToComponent [math.MaxUint8]*interpolatedComponentData
 }
 
 func NewComponentMapper() *ComponentMapper {
 	return &ComponentMapper{
-		typeToId:      make(map[reflect.Type]uint8),
-		idToComponent: make(map[uint8]interpolatedComponentData),
+		typeToId: make(map[reflect.Type]uint8),
 	}
 }
 
@@ -48,51 +48,42 @@ func (c *ComponentMapper) RegisterInterpolatedComponent(id uint8, comp donburi.I
 		return fmt.Errorf("lerp function must have 3 arguments: %w", ErrMalformedLerpFunction)
 	}
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	c.idToComponent[id] = interpolatedComponentData{
+	c.idToComponent[id] = &interpolatedComponentData{
 		typ:    comp,
-		setter: lerp,
+		setter: reflect.ValueOf(lerp),
 	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	c.typeToId[comp.Typ()] = id
 
 	return nil
 }
 
-func (c *ComponentMapper) LookupSetter(id uint8) any {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
+func (c *ComponentMapper) LookupSetter(id uint8) reflect.Value {
 	return c.idToComponent[id].setter
 }
 
 func (c *ComponentMapper) RegisteredType(typ reflect.Type) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	_, ok := c.typeToId[typ]
 	return ok
 }
 
 func (c *ComponentMapper) RegisteredId(id uint8) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	_, ok := c.idToComponent[id]
-	return ok
+	return c.idToComponent[id] != nil
 }
 
 func (c *ComponentMapper) LookupType(id uint8) reflect.Type {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	return c.idToComponent[id].typ.Typ()
 }
 
 func (c *ComponentMapper) LookupId(typ reflect.Type) uint8 {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	return c.typeToId[typ]
 }

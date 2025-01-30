@@ -96,7 +96,7 @@ func LookupInterpType(id uint8) reflect.Type {
 
 // LookupInterpSetter returns the setter function for the given interpolation ID.
 // This should always be type [esync.LerpFn]
-func LookupInterpSetter(id uint8) any {
+func LookupInterpSetter(id uint8) reflect.Value {
 	return interpolated.LookupSetter(id)
 }
 
